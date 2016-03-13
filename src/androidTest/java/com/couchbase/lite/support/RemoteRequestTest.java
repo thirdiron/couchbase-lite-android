@@ -56,7 +56,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
         dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
         try {
-            server.play();
+            server.start();
 
             String urlString = String.format("%s/%s", server.getUrl("/db"), "_local");
             URL url = new URL(urlString);
@@ -88,6 +88,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
                     requestExecutorService,
                     workExecutorService,
                     factory,
+                    factory.getHttpClient(),
                     "GET",
                     url,
                     requestBody,
@@ -122,6 +123,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
 
     public void testRetryAllRequestsFail() throws Exception {
 
+        RemoteRequestRetry.MAX_RETRIES = 2;
         // lower retry to speed up test
         RemoteRequestRetry.RETRY_DELAY_MS = 5;
 
@@ -139,7 +141,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, new MockResponse().setResponseCode(503));
         }
         try {
-            server.play();
+            server.start();
 
             String urlString = String.format("%s/%s", server.getUrl("/db"), "_local");
             URL url = new URL(urlString);
@@ -163,7 +165,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
                 }
             };
 
-            ScheduledExecutorService requestExecutorService = Executors.newScheduledThreadPool(5);
+            ScheduledExecutorService requestExecutorService = Executors.newScheduledThreadPool(1);
             ScheduledExecutorService workExecutorService = Executors.newSingleThreadScheduledExecutor();
 
             // ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(4);
@@ -172,6 +174,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
                     requestExecutorService,
                     workExecutorService,
                     factory,
+                    factory.getHttpClient(),
                     "GET",
                     url,
                     requestBody,
@@ -186,8 +189,8 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
             future.get(300, TimeUnit.SECONDS);
 
             // at this point, the completionBlock should have already been called back
-            // with a 404 error, which will decrement countdown latch.
-            boolean success = received503Error.await(1, TimeUnit.SECONDS);
+            // with a 503 error, which will decrement countdown latch.
+            boolean success = received503Error.await(20, TimeUnit.SECONDS);
             assertTrue(success);
 
             // make sure that we saw MAX_RETRIES requests sent to server
@@ -235,7 +238,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
             wrapped.setSticky(true);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, wrapped);
 
-            server.play();
+            server.start();
 
             String urlString = String.format("%s/%s", server.getUrl("/db"), "_local");
             URL url = new URL(urlString);
@@ -275,6 +278,7 @@ public class RemoteRequestTest extends LiteTestCaseWithDB {
                         requestExecutorService,
                         workExecutorService,
                         factory,
+                        factory.getHttpClient(),
                         "GET",
                         url,
                         requestBody,

@@ -91,7 +91,7 @@ public class MockBulkDocs implements SmartMockResponse {
                 responseList.add(responseListItem);
             }
 
-            mockResponse.setBody(Manager.getObjectMapper().writeValueAsBytes(responseList));
+            mockResponse.setBody(new String(Manager.getObjectMapper().writeValueAsBytes(responseList)));
             MockHelper.set200OKJson(mockResponse);
             return mockResponse;
 

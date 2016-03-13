@@ -15,6 +15,7 @@ import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ public class BulkDownloaderTest extends LiteTestCaseWithDB {
 
         PersistentCookieStore cookieStore = database.getPersistentCookieStore();
         CouchbaseLiteHttpClientFactory factory = new CouchbaseLiteHttpClientFactory(cookieStore);
+        HttpClient httpClinet = factory.getHttpClient();
 
         // create mockwebserver and custom dispatcher
         MockDispatcher dispatcher = new MockDispatcher();
@@ -48,7 +50,7 @@ public class BulkDownloaderTest extends LiteTestCaseWithDB {
             mockBulkDocs.setSticky(true);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_DOCS, mockBulkDocs);
 
-            server.play();
+            server.start();
 
             ScheduledExecutorService requestExecutorService = Executors.newScheduledThreadPool(5);
             ScheduledExecutorService workExecutorService = Executors.newSingleThreadScheduledExecutor();
@@ -71,6 +73,7 @@ public class BulkDownloaderTest extends LiteTestCaseWithDB {
             BulkDownloader bulkDownloader = new BulkDownloader(
                     workExecutorService,
                     factory,
+                    httpClinet,
                     url,
                     revs,
                     database,
@@ -107,6 +110,7 @@ public class BulkDownloaderTest extends LiteTestCaseWithDB {
             Utils.shutdownAndAwaitTermination(workExecutorService);
         }finally {
             server.shutdown();
+            httpClinet.getConnectionManager().shutdown();
         }
     }
 }

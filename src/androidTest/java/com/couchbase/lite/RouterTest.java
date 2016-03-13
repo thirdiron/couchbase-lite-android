@@ -703,7 +703,7 @@ public class RouterTest extends LiteTestCaseWithDB {
             MockCheckpointGet mockCheckpointGet = new MockCheckpointGet();
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointGet);
 
-            server.play();
+            server.start();
 
             Map<String, Object> replicateJsonMap = getPushReplicationParsedJson(server.getUrl("/db"));
 
@@ -747,7 +747,7 @@ public class RouterTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // kick off replication via REST api
             Map<String, Object> replicateJsonMap = getPullReplicationParsedJson(server.getUrl("/db"));
@@ -919,7 +919,7 @@ public class RouterTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // kick off 1st replication via REST api
             Map<String, Object> replicateJsonMap = getPullReplicationParsedJson(server.getUrl("/db"));
@@ -977,7 +977,7 @@ public class RouterTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // kick off 1st replication via REST api
             Map<String, Object> replicateJsonMap = getPullReplicationParsedJson(server.getUrl("/db"));
@@ -1064,7 +1064,7 @@ public class RouterTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // kick off replication via REST api
             Map<String, Object> replicateJsonMap = getPullReplicationParsedJson(server.getUrl("/db"));

@@ -10,7 +10,7 @@ public class MockDocumentAllDocs implements SmartMockResponse {
     public MockResponse generateMockResponse(RecordedRequest request) {
         try {
             MockResponse mockResponse = new MockResponse();
-            mockResponse.setBody("{\"offset\" : 0, \"rows\" : [],\"total_rows\" : 0}".getBytes());
+            mockResponse.setBody("{\"offset\" : 0, \"rows\" : [],\"total_rows\" : 0}");
             mockResponse.setStatus("HTTP/1.1 200 OK");
             return mockResponse;
         } catch (Exception e) {

@@ -44,7 +44,7 @@ public class PushReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response w/ 404 + respond to all PUT Checkpoint requests
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -80,7 +80,7 @@ public class PushReplicationTest extends LiteTestCaseWithDB {
             RecordedRequest docputRequest = dispatcher.takeRequest(docPathRegex);
             CustomMultipartReaderDelegate delegate = new CustomMultipartReaderDelegate();
             MultipartReader reader = new MultipartReader(docputRequest.getHeader("Content-Type"), delegate);
-            reader.appendData(docputRequest.getBody());
+            reader.appendData(docputRequest.getBody().readByteArray());
             assertTrue(delegate.json.contains(docId));
             byte[] attachmentBytes = MockDocumentGet.getAssetByteArray(docAttachName);
             assertTrue(Arrays.equals(attachmentBytes, delegate.attachment));

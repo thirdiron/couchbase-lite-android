@@ -42,15 +42,30 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
         changeTrackerTestWithMode(ChangeTracker.ChangeTrackerMode.LongPoll, true, false);
     }
 
+    private HttpClient getHttpClient(final boolean useMockReplicator){
+        if (useMockReplicator) {
+            CustomizableMockHttpClient mockHttpClient = new CustomizableMockHttpClient();
+            mockHttpClient.setResponder("_changes", new CustomizableMockHttpClient.Responder() {
+                @Override
+                public HttpResponse execute(HttpUriRequest httpUriRequest) throws IOException {
+                    String json = "{\"results\":[\n" +
+                            "{\"seq\":\"1\",\"id\":\"doc1-138\",\"changes\":[{\"rev\":\"1-82d\"}]}],\n" +
+                            "\"last_seq\":\"*:50\"}";
+                    return CustomizableMockHttpClient.generateHttpResponseObject(json);
+                }
+            });
+            return mockHttpClient;
+        } else {
+            return new DefaultHttpClient();
+        }
+    }
     public void changeTrackerTestWithMode(ChangeTracker.ChangeTrackerMode mode, final boolean useMockReplicator, final boolean checkLastException) throws Throwable {
-
         final CountDownLatch changeTrackerFinishedSignal = new CountDownLatch(1);
         final CountDownLatch changeReceivedSignal = new CountDownLatch(1);
 
         URL testURL = getReplicationURL();
 
         ChangeTrackerClient client = new ChangeTrackerClient() {
-
             @Override
             public void changeTrackerStopped(ChangeTracker tracker) {
                 changeTrackerFinishedSignal.countDown();
@@ -73,28 +88,9 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
                 }
                 changeReceivedSignal.countDown();
             }
-
-            @Override
-            public HttpClient getHttpClient() {
-                if (useMockReplicator) {
-                    CustomizableMockHttpClient mockHttpClient = new CustomizableMockHttpClient();
-                    mockHttpClient.setResponder("_changes", new CustomizableMockHttpClient.Responder() {
-                        @Override
-                        public HttpResponse execute(HttpUriRequest httpUriRequest) throws IOException {
-                            String json = "{\"results\":[\n" +
-                                    "{\"seq\":\"1\",\"id\":\"doc1-138\",\"changes\":[{\"rev\":\"1-82d\"}]}],\n" +
-                                    "\"last_seq\":\"*:50\"}";
-                            return CustomizableMockHttpClient.generateHttpResponseObject(json);
-                        }
-                    });
-                    return mockHttpClient;
-                } else {
-                    return new DefaultHttpClient();
-                }
-            }
         };
 
-        final ChangeTracker changeTracker = new ChangeTracker(testURL, mode, false, 0, client);
+        final ChangeTracker changeTracker = new ChangeTracker(testURL, getHttpClient(useMockReplicator), mode, false, 0, client);
         changeTracker.setUsePOST(isTestingAgainstSyncGateway());
         changeTracker.start();
 
@@ -128,14 +124,14 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
 
     public void testChangeTrackerWithConflictsIncluded() throws Throwable {
         URL testURL = getReplicationURL();
-        ChangeTracker changeTracker = new ChangeTracker(testURL, ChangeTracker.ChangeTrackerMode.LongPoll, true, 0, null);
+        ChangeTracker changeTracker = new ChangeTracker(testURL, null, ChangeTracker.ChangeTrackerMode.LongPoll, true, 0, null);
         assertEquals("_changes?feed=longpoll&limit=50&heartbeat=300000&style=all_docs&since=0", changeTracker.getChangesFeedPath());
     }
 
     public void testChangeTrackerWithFilterURL() throws Throwable {
 
         URL testURL = getReplicationURL();
-        ChangeTracker changeTracker = new ChangeTracker(testURL, ChangeTracker.ChangeTrackerMode.LongPoll, false, 0, null);
+        ChangeTracker changeTracker = new ChangeTracker(testURL, null, ChangeTracker.ChangeTrackerMode.LongPoll, false, 0, null);
 
         // set filter
         changeTracker.setFilterName("filter");
@@ -154,7 +150,7 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
     public void testChangeTrackerWithDocsIds() throws Exception {
         URL testURL = getReplicationURL();
 
-        ChangeTracker changeTrackerDocIds = new ChangeTracker(testURL, ChangeTracker.ChangeTrackerMode.LongPoll, false, 0, null);
+        ChangeTracker changeTrackerDocIds = new ChangeTracker(testURL, null, ChangeTracker.ChangeTrackerMode.LongPoll, false, 0, null);
         List<String> docIds = new ArrayList<String>();
         docIds.add("doc1");
         docIds.add("doc2");
@@ -207,6 +203,27 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
         runChangeTrackerTransientError(ChangeTracker.ChangeTrackerMode.LongPoll, errorCode, statusMessage, numExpectedChangeCallbacks);
     }
 
+    private HttpClient getHttpClient(final int errorCode,final String statusMessage){
+        CustomizableMockHttpClient mockHttpClient = new CustomizableMockHttpClient();
+        CustomizableMockHttpClient.Responder sentinal = defaultChangesResponder();
+        Queue<CustomizableMockHttpClient.Responder> responders = new LinkedList<CustomizableMockHttpClient.Responder>();
+        responders.add(defaultChangesResponder());
+        responders.add(CustomizableMockHttpClient.transientErrorResponder(errorCode, statusMessage));
+        ResponderChain responderChain = new ResponderChain(responders, sentinal);
+        mockHttpClient.setResponder("_changes", responderChain);
+        return mockHttpClient;
+    }
+    private CustomizableMockHttpClient.Responder defaultChangesResponder() {
+        return new CustomizableMockHttpClient.Responder() {
+            @Override
+            public HttpResponse execute(HttpUriRequest httpUriRequest) throws IOException {
+                String json = "{\"results\":[\n" +
+                        "{\"seq\":\"1\",\"id\":\"doc1-138\",\"changes\":[{\"rev\":\"1-82d\"}]}],\n" +
+                        "\"last_seq\":\"*:50\"}";
+                return CustomizableMockHttpClient.generateHttpResponseObject(json);
+            }
+        };
+    }
     private void runChangeTrackerTransientError(ChangeTracker.ChangeTrackerMode mode,
                                                 final int errorCode,
                                                 final String statusMessage,
@@ -236,34 +253,9 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
             public void changeTrackerReceivedChange(Map<String, Object> change) {
                 changeReceivedSignal.countDown();
             }
-
-            @Override
-            public HttpClient getHttpClient() {
-                CustomizableMockHttpClient mockHttpClient = new CustomizableMockHttpClient();
-                CustomizableMockHttpClient.Responder sentinal = defaultChangesResponder();
-                Queue<CustomizableMockHttpClient.Responder> responders = new LinkedList<CustomizableMockHttpClient.Responder>();
-                responders.add(defaultChangesResponder());
-                responders.add(CustomizableMockHttpClient.transientErrorResponder(errorCode, statusMessage));
-                ResponderChain responderChain = new ResponderChain(responders, sentinal);
-                mockHttpClient.setResponder("_changes", responderChain);
-                return mockHttpClient;
-            }
-
-            private CustomizableMockHttpClient.Responder defaultChangesResponder() {
-                return new CustomizableMockHttpClient.Responder() {
-                    @Override
-                    public HttpResponse execute(HttpUriRequest httpUriRequest) throws IOException {
-                        String json = "{\"results\":[\n" +
-                                "{\"seq\":\"1\",\"id\":\"doc1-138\",\"changes\":[{\"rev\":\"1-82d\"}]}],\n" +
-                                "\"last_seq\":\"*:50\"}";
-                        return CustomizableMockHttpClient.generateHttpResponseObject(json);
-                    }
-                };
-            }
-
         };
 
-        final ChangeTracker changeTracker = new ChangeTracker(testURL, mode, false, 0, client);
+        final ChangeTracker changeTracker = new ChangeTracker(testURL, getHttpClient(errorCode, statusMessage), mode, false, 0, client);
         changeTracker.setUsePOST(isTestingAgainstSyncGateway());
         changeTracker.start();
 
@@ -313,14 +305,9 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
                 Object seq = change.get("seq");
                 Log.v(TAG, "changeTrackerReceivedChange: %d" + seq.toString());
             }
-
-            @Override
-            public HttpClient getHttpClient() {
-                return mockHttpClient;
-            }
         };
 
-        final ChangeTracker changeTracker = new ChangeTracker(testURL, ChangeTracker.ChangeTrackerMode.LongPoll, false, 0, client);
+        final ChangeTracker changeTracker = new ChangeTracker(testURL, mockHttpClient, ChangeTracker.ChangeTrackerMode.LongPoll, false, 0, client);
         changeTracker.setUsePOST(isTestingAgainstSyncGateway());
         changeTracker.start();
 
@@ -388,14 +375,9 @@ public class ChangeTrackerTest extends LiteTestCaseWithDB {
                 Object seq = change.get("seq");
                 changeReceivedSignal.countDown();
             }
-
-            @Override
-            public HttpClient getHttpClient() {
-                return new DefaultHttpClient();
-            }
         };
 
-        final ChangeTracker changeTracker = new ChangeTracker(testURL, ChangeTracker.ChangeTrackerMode.Continuous, false, 0, client);
+        final ChangeTracker changeTracker = new ChangeTracker(testURL,new DefaultHttpClient(), ChangeTracker.ChangeTrackerMode.Continuous, false, 0, client);
         changeTracker.setUsePOST(isTestingAgainstSyncGateway());
         changeTracker.start();
 

@@ -111,7 +111,7 @@ public class MockHelper {
      * returns decompressed byte[] body
      */
     public static byte[] getUncompressedBody(RecordedRequest request){
-        byte[] body = request.getBody();
+        byte[] body = request.getBody().readByteArray();
         if(isGzip(request)){
             body = com.couchbase.lite.util.Utils.decompressByGzip(body);
         }

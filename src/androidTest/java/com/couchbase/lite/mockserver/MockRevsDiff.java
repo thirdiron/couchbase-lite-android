@@ -89,7 +89,7 @@ public class MockRevsDiff implements SmartMockResponse {
                 responseMap.put(key, missingMap);
             }
 
-            mockResponse.setBody(Manager.getObjectMapper().writeValueAsBytes(responseMap));
+            mockResponse.setBody(new String(Manager.getObjectMapper().writeValueAsBytes(responseMap)));
             MockHelper.set200OKJson(mockResponse);
             return mockResponse;
 

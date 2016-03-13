@@ -252,7 +252,7 @@ public class MockDocumentGet {
                         multiPart.getContentType().getValue());
 
                 byte[] body = baos.toByteArray();
-                mockResponse.setBody(body);
+                mockResponse.setBody(new String(body));
 
                 String bodyString = new String(body);
 

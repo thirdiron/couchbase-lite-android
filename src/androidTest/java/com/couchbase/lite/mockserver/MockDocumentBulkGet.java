@@ -125,7 +125,8 @@ public class MockDocumentBulkGet implements SmartMockResponse {
 
             byte[] byteArray = o.toByteArray();
 
-            mockResponse.setBody(byteArray);
+            mockResponse.setBody(new String(byteArray));
+
 
             mockResponse.setStatus("HTTP/1.1 200 OK");
 

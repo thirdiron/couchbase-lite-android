@@ -183,7 +183,7 @@ public class DatabaseTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             final Replication replication = database.createPullReplication(server.getUrl("/db"));
 

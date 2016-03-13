@@ -356,7 +356,7 @@ public class ManagerTest extends LiteTestCaseWithDB {
         MockWebServer server = new MockWebServer();
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // checkpoint PUT or GET response (sticky) (for both push and pull)
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();

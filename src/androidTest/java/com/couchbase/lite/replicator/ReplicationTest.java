@@ -163,7 +163,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockDispatcher dispatcher = new MockDispatcher();
             dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
             server.setDispatcher(dispatcher);
-            server.play();
+            server.start();
 
             // mock documents to be pulled
             MockDocumentGet.MockDocument mockDoc1 = new MockDocumentGet.MockDocument("doc1", "1-5e38", 1);
@@ -439,7 +439,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -672,7 +672,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         int numDocsPerChangesResponse = numMockRemoteDocs / 10;
         MockWebServer server = MockHelper.getPreloadedPullTargetMockCouchDB(dispatcher, numMockRemoteDocs, numDocsPerChangesResponse);
         try {
-            server.play();
+            server.start();
 
             final CountDownLatch receivedAllDocs = new CountDownLatch(1);
 
@@ -768,7 +768,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         try {
             dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
-            server.play();
+            server.start();
 
             // add some documents - verify it has an attachment
             Document doc1 = createDocumentForPushReplication(doc1Id, doc1AttachName, contentType);
@@ -924,7 +924,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             mockBulkDocs.setSticky(true);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_DOCS, mockBulkDocs);
 
-            server.play();
+            server.start();
 
             // create replication
             Replication replication = database.createPushReplication(server.getUrl("/db"));
@@ -1002,7 +1002,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(serverType);
         try {
-            server.play();
+            server.start();
 
             // add some documents
             Document doc1 = createDocumentForPushReplication(doc1Id, null, null);
@@ -1064,7 +1064,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             RecordedRequest doc2putRequest = dispatcher.takeRequest(doc2PathRegex);
             CustomMultipartReaderDelegate delegate2 = new CustomMultipartReaderDelegate();
             MultipartReader reader2 = new MultipartReader(doc2putRequest.getHeader("Content-Type"), delegate2);
-            reader2.appendData(doc2putRequest.getBody());
+            reader2.appendData(doc2putRequest.getBody().readByteArray());
             String body2 = new String(delegate2.data, "UTF-8");
             assertTrue(body2.contains(doc2Id));
             assertFalse(body2.contains(doc3Id));
@@ -1072,7 +1072,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             RecordedRequest doc3putRequest = dispatcher.takeRequest(doc3PathRegex);
             CustomMultipartReaderDelegate delegate3 = new CustomMultipartReaderDelegate();
             MultipartReader reader3 = new MultipartReader(doc3putRequest.getHeader("Content-Type"), delegate3);
-            reader3.appendData(doc3putRequest.getBody());
+            reader3.appendData(doc3putRequest.getBody().readByteArray());
             String body3 = new String(delegate3.data, "UTF-8");
             assertTrue(body3.contains(doc3Id));
             assertFalse(body3.contains(doc2Id));
@@ -1124,7 +1124,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response w/ 404.  also receives checkpoint PUT's
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -1216,7 +1216,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockWebServer server = MockHelper.getMockWebServer(dispatcher);
             dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
             try {
-                server.play();
+                server.start();
 
                 // mock checkpoint GET response w/ 404
                 MockResponse fakeCheckpointResponse = new MockResponse();
@@ -1436,7 +1436,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(docRev3Deleted.getDocPathRegex(), mockDocRev3DeletedGet.generateMockResponse());
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -1769,7 +1769,8 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         puller.setCookie(cookieName, cookieVal, "", expirationDate, isSecure, httpOnly);
 
         // make sure it made it into cookie store and has expected params
-        CookieStore cookieStore = puller.getClientFactory().getCookieStore();
+        //CookieStore cookieStore = puller.getClientFactory().getCookieStore();
+        CookieStore cookieStore = puller.db.getManager().getDefaultHttpClientFactory().getCookieStore();
         List<Cookie> cookies = cookieStore.getCookies();
         assertEquals(1, cookies.size());
         Cookie cookie = cookies.get(0);
@@ -1859,7 +1860,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             //create url for replication
             URL baseUrl = server.getUrl("/db");
@@ -2148,7 +2149,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, new MockCheckpointPut());
 
             // start mock server
-            server.play();
+            server.start();
 
             // Add Validation block
             database.setValidation("testValidationBlockCalled", new Validator() {
@@ -2196,7 +2197,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         int numDocsPerChangesResponse = numMockRemoteDocs / 10;
         MockWebServer server = MockHelper.getPreloadedPullTargetMockCouchDB(dispatcher, numMockRemoteDocs, numDocsPerChangesResponse);
         try {
-            server.play();
+            server.start();
 
             final CountDownLatch receivedAllDocs = new CountDownLatch(1);
 
@@ -2400,7 +2401,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         try {
-            server.play();
+            server.start();
 
             // add some documents
             Document doc1 = createDocumentForPushReplication(doc1Id, null, null);
@@ -2537,7 +2538,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         try {
-            server.play();
+            server.start();
 
             // mock documents to be pulled
             MockDocumentGet.MockDocument mockDoc1 = new MockDocumentGet.MockDocument("doc1", "1-5e38", 1);
@@ -2710,7 +2711,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             }
 
             // start mock server
-            server.play();
+            server.start();
 
             //create url for replication
             URL baseUrl = server.getUrl("/db");
@@ -2784,7 +2785,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             try {
                 MockDispatcher dispatcher = new MockDispatcher();
                 server.setDispatcher(dispatcher);
-                server.play();
+                server.start();
 
                 // checkpoint PUT response (sticky)
                 MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -2902,7 +2903,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_FACEBOOK_AUTH, mockFacebookAuthPost.generateMockResponse());
 
             // start mock server
-            server.play();
+            server.start();
 
             // register bogus fb token
             Authenticator facebookAuthenticator = AuthenticatorFactory.createFacebookAuthenticator("fake_access_token");
@@ -2944,7 +2945,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             mockCheckpointPut.setDelayMs(500);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
-            server.play();
+            server.start();
 
             Map<String, Object> properties = new HashMap<String, Object>();
             properties.put("source", DEFAULT_TEST_DB);
@@ -3017,7 +3018,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             mockCheckpointPut.setDelayMs(500);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
-            server.play();
+            server.start();
 
             Map<String, Object> properties = new HashMap<String, Object>();
             properties.put("source", DEFAULT_TEST_DB);
@@ -3136,7 +3137,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -3181,7 +3182,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getPreloadedPullTargetMockCouchDB(dispatcher, 2, 2);
 
         try {
-            server.play();
+            server.start();
 
             // Setup validation to reject document with id: doc1
             database.setValidation("validateOnlyDoc1", new Validator() {
@@ -3232,7 +3233,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, mockChangesFeed.generateMockResponse());
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -3289,7 +3290,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             mockChangesFeedNoResponse.setSticky(true);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, mockChangesFeedNoResponse);
 
-            server.play();
+            server.start();
 
             // create pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -3374,7 +3375,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_GET, mockBulkGet);
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -3442,7 +3443,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             Map<String, Object> userCtx = new HashMap<String, Object>();
             userCtx.put("name", "foo");
             responseJson.put("userCtx", userCtx);
-            fakeSessionResponse2.setBody(Manager.getObjectMapper().writeValueAsBytes(responseJson));
+            fakeSessionResponse2.setBody(new String(Manager.getObjectMapper().writeValueAsBytes(responseJson)));
             MockHelper.set200OKJson(fakeSessionResponse2);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_SESSION_COUCHDB, fakeSessionResponse2);
 
@@ -3452,7 +3453,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -3504,7 +3505,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, wrapped);
 
             // start mock server
-            server.play();
+            server.start();
 
             // run pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -3575,7 +3576,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockBulkDocs mockBulkDocs = new MockBulkDocs();
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_DOCS, mockBulkDocs);
 
-            server.play();
+            server.start();
 
             // 2. Create replication
             Replication replication = database.createPushReplication(server.getUrl("/db"));
@@ -3718,7 +3719,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockBulkDocs mockBulkDocs = new MockBulkDocs();
             mockBulkDocs.setSticky(true);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_DOCS, mockBulkDocs);
-            server.play();
+            server.start();
 
             // Create replicator
             Replication replication = database.createPushReplication(server.getUrl("/db"));
@@ -3837,7 +3838,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
                     mockBulkDocs.setSticky(true);
                     dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_DOCS, mockBulkDocs);
                 }
-                server.play();
+                server.start();
 
                 // register bogus fb token
                 Authenticator facebookAuthenticator = AuthenticatorFactory.createFacebookAuthenticator("fake_access_token");
@@ -3983,7 +3984,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             mockBulkDocs.setSticky(true);
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_DOCS, mockBulkDocs);
         }
-        server.play();
+        server.start();
 
         // create replication
         Replication replication = database.createPushReplication(server.getUrl("/db"));
@@ -4053,7 +4054,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response w/ 404.  also receives checkpoint PUT's
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -4199,7 +4200,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
 
             Log.e(TAG, "SERVER START");
 
-            server.play();
+            server.start();
 
             // create pull replication
             final Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -4301,7 +4302,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockChangesFeed mockChangesFeed = new MockChangesFeed();
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, mockChangesFeed.generateMockResponse());
 
-            server.play();
+            server.start();
 
             // create pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -4372,7 +4373,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockChangesFeed mockChangesFeed = new MockChangesFeed();
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, mockChangesFeed.generateMockResponse());
 
-            server.play();
+            server.start();
 
             // create pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -4439,7 +4440,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, mockChangesFeedEmpty.generateMockResponse());
 
             // start mock server
-            server.play();
+            server.start();
 
             // create pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -4619,7 +4620,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHANGES, mockChangesFeedEmpty.generateMockResponse());
 
             // start mock server
-            server.play();
+            server.start();
 
             // create pull replication
             Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -4752,7 +4753,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response w/ 404.  also receives checkpoint PUT's
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -4839,7 +4840,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = new MockWebServer();
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // checkpoint PUT or GET response (sticky) (for both push and pull)
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -4933,7 +4934,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = MockHelper.getMockWebServer(dispatcher);
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response w/ 404.  also receives checkpoint PUT's
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -5022,7 +5023,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.COUCHDB);
         MockWebServer server = MockHelper.getPreloadedPullTargetMockCouchDB(dispatcher, 0, 0);
         try {
-            server.play();
+            server.start();
 
 
             // run pull replication
@@ -5086,7 +5087,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response w/ 404 + respond to all PUT Checkpoint requests
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -5203,7 +5204,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
         MockWebServer server = new MockWebServer();
         server.setDispatcher(dispatcher);
         try {
-            server.play();
+            server.start();
 
             // checkpoint GET response -> error
 
@@ -5342,7 +5343,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
                 dispatcher.enqueueResponse(MockHelper.PATH_REGEX_BULK_GET, mockBulkGet);
 
                 // start mock server
-                server.play();
+                server.start();
 
                 // run pull replication
                 Replication pullReplication = database.createPullReplication(server.getUrl("/db"));
@@ -5404,7 +5405,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockDispatcher dispatcher = new MockDispatcher();
             server = MockHelper.getMockWebServer(dispatcher);
             dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
-            server.play();
+            server.start();
 
             // Checkpoint GET response w/ 404 + respond to all PUT Checkpoint requests:
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -5455,7 +5456,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockDispatcher dispatcher = new MockDispatcher();
             server = MockHelper.getMockWebServer(dispatcher);
             dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
-            server.play();
+            server.start();
 
             // checkpoint PUT or GET response (sticky):
             MockCheckpointPut mockCheckpointPut = new MockCheckpointPut();
@@ -5497,7 +5498,7 @@ public class ReplicationTest extends LiteTestCaseWithDB {
             MockDispatcher dispatcher = new MockDispatcher();
             server = MockHelper.getMockWebServer(dispatcher);
             dispatcher.setServerType(MockDispatcher.ServerType.SYNC_GW);
-            server.play();
+            server.start();
 
             // Mock documents to be pulled:
             MockDocumentGet.MockDocument mockDoc1 =

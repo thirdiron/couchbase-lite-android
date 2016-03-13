@@ -83,7 +83,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
 
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
@@ -185,7 +185,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
@@ -292,7 +292,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
@@ -384,7 +384,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
@@ -467,7 +467,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
@@ -548,7 +548,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
             dispatcher.enqueueResponse(MockHelper.PATH_REGEX_CHECKPOINT, mockCheckpointPut);
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
@@ -652,7 +652,7 @@ public class ReplicationInternalTest extends LiteTestCaseWithDB {
 
 
             // start mock server
-            server.play();
+            server.start();
 
             //create replication
             Replication pull = database.createPullReplication(server.getUrl("/db"));
