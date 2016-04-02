@@ -349,13 +349,15 @@ public class LiteTestCaseWithDB extends LiteTestCase {
         return properties;
     }
 
-
-    protected URLConnection sendRequest(String method, String path,
-                                        Map<String, String> headers, Object bodyObj) {
+    protected URLConnection sendRequest(String method,
+                                        String path,
+                                        Map<String, String> headers,
+                                        Object bodyObj) {
         try {
             URL url = new URL("cblite://" + path);
             URLConnection conn = (URLConnection) url.openConnection();
-            conn.setRequestProperty("Content-Type", "application/json");
+            if (headers == null || !headers.containsKey("Content-Type"))
+                conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
             conn.setRequestMethod(method);
             if (headers != null) {
@@ -418,10 +420,13 @@ public class LiteTestCaseWithDB extends LiteTestCase {
         return result;
     }
 
-    protected Object sendBody(String method, String path, Object bodyObj,
-                              int expectedStatus, Object expectedResult) {
-        URLConnection conn = sendRequest(method, path, null, bodyObj);
-        conn.setRequestProperty("Content-Type", "application/json");
+    protected Object sendBody(String method,
+                              String path,
+                              Map<String, String> headers,
+                              Object bodyObj,
+                              int expectedStatus,
+                              Object expectedResult) {
+        URLConnection conn = sendRequest(method, path, headers, bodyObj);
         Object result = parseJSONResponse(conn);
         Log.v(TAG, "%s %s --> %d", method, path, conn.getResponseCode());
         Assert.assertEquals(expectedStatus, conn.getResponseCode());
@@ -429,6 +434,14 @@ public class LiteTestCaseWithDB extends LiteTestCase {
             Assert.assertEquals(expectedResult, result);
         }
         return result;
+    }
+
+    protected Object sendBody(String method,
+                              String path,
+                              Object bodyObj,
+                              int expectedStatus,
+                              Object expectedResult) {
+        return sendBody(method, path, null, bodyObj, expectedStatus, expectedResult);
     }
 
     protected Object send(String method, String path, int expectedStatus, Object expectedResult) {

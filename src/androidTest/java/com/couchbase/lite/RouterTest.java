@@ -501,6 +501,70 @@ public class RouterTest extends LiteTestCaseWithDB {
         assertEquals(4, result.get("total_rows"));
     }
 
+    // https://github.com/couchbase/couchbase-lite-java-core/issues/1098
+    public void testViewsWithRevisions() throws CouchbaseLiteException {
+        send("PUT", "/db", Status.CREATED, null);
+
+        // set view
+        Database db = manager.getDatabase("db");
+        View view = db.getView("design-doc-id/view-name");
+        view.setMapReduce(new Mapper() {
+            @Override
+            public void map(Map<String, Object> document, Emitter emitter) {
+                emitter.emit(document.get("timestamp"), document);
+            }
+        }, null, "1");
+
+        // Create doc1
+        Map<String, Object> doc1 = new HashMap<String, Object>();
+        doc1.put("message", "doc 1-1");
+        doc1.put("timestamp", 1);
+        Map<String, Object> result1 = (Map<String, Object>) sendBody("PUT", "/db/doc1", doc1, Status.CREATED, null);
+        String revID1 = (String) result1.get("rev");
+
+        // Create doc2
+        Map<String, Object> doc2 = new HashMap<String, Object>();
+        doc2.put("message", "doc 2-1");
+        doc2.put("timestamp", 2);
+        Map<String, Object> result2 = (Map<String, Object>) sendBody("PUT", "/db/doc2", doc2, Status.CREATED, null);
+        String revID2 = (String) result2.get("rev");
+
+        // Create doc3
+        Map<String, Object> doc3 = new HashMap<String, Object>();
+        doc3.put("message", "doc 3-1");
+        doc3.put("timestamp", 3);
+        Map<String, Object> result3 = (Map<String, Object>) sendBody("PUT", "/db/doc3", doc3, Status.CREATED, null);
+        String revID3 = (String) result3.get("rev");
+
+        // Try a conditional GET:
+        URLConnection conn1 = sendRequest("GET", "/db/_design/design-doc-id/_view/view-name?include_docs=true", null, null);
+        assertEquals(Status.OK, conn1.getResponseCode());
+        Map<String, Object> resp1 = (Map<String, Object>) parseJSONResponse(conn1);
+        assertEquals(3, resp1.get("total_rows"));
+        List rows1 = (List) resp1.get("rows");
+        assertEquals(3, rows1.size());
+        Map<String, Object> value1 = (Map<String, Object>) rows1.get(2);
+        assertEquals(3, value1.get("key"));
+
+        // update doc1
+        doc1.put("message", "doc 1-2");
+        doc1.put("timestamp", 4);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("If-Match", revID1);
+        Map<String, Object> result4 = (Map<String, Object>) sendBody("PUT", "/db/doc1", headers, doc1, Status.CREATED, null);
+        String revID4 = (String) result4.get("rev");
+
+        // Try a conditional GET:
+        URLConnection conn2 = sendRequest("GET", "/db/_design/design-doc-id/_view/view-name?include_docs=true", null, null);
+        assertEquals(Status.OK, conn2.getResponseCode());
+        Map<String, Object> resp2 = (Map<String, Object>) parseJSONResponse(conn2);
+        assertEquals(3, resp2.get("total_rows"));
+        List rows2 = (List) resp2.get("rows");
+        assertEquals(3, rows2.size());
+        Map<String, Object> value2 = (Map<String, Object>) rows2.get(2);
+        assertEquals(4, value2.get("key"));
+    }
+
     public void testPostBulkDocs() {
         send("PUT", "/db", Status.CREATED, null);
 
