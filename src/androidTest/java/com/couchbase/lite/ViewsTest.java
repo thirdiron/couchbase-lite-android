@@ -3522,4 +3522,58 @@ public class ViewsTest extends LiteTestCaseWithDB {
             Log.v(TAG, String.format("Iterrator done"));
         }
     }
+
+    /**
+     * Duplicate docs in Android view
+     * https://github.com/couchbase/couchbase-lite-android/issues/855
+     */
+    public void testDuplicatedQueryResults() throws CouchbaseLiteException {
+        // Setup View
+        View view = database.getView("view");
+        if (view != null) {
+            view.setMap(new Mapper() {
+                @Override
+                public void map(Map<String, Object> document, Emitter emitter) {
+                    if (document.get("type") != null && "public-profile".equals(document.get("type"))) {
+                        emitter.emit(document.get("owner"), null);
+                    }
+                }
+            }, "1");
+        }
+
+        Document doc1 = database.getDocument("DOC");
+        Map<String, Object> props1 = new HashMap<String, Object>();
+        props1.put("owner", "A");
+        props1.put("type", "public-profile");
+        props1.put("version", 1);
+        doc1.putProperties(props1);
+
+        // make sure if doc is indexed
+        int counter = 0;
+        QueryEnumerator results = view.createQuery().run();
+        for (Iterator<QueryRow> it = results; it.hasNext(); ) {
+            QueryRow row = it.next();
+            assertEquals(1, row.getDocument().getProperties().get("version"));
+            Log.e(TAG, "row: " + row.getDocument().getProperties());
+            counter++;
+        }
+        assertEquals(1, counter);
+
+        // Update document
+        Document doc2 = database.getDocument("DOC");
+        Map<String, Object> props2 = new HashMap<String, Object>(doc2.getProperties());
+        props2.put("version", 2);
+        doc2.putProperties(props2);
+
+        // make sure only latest one is indexed
+        counter = 0;
+        results = view.createQuery().run();
+        for (Iterator<QueryRow> it = results; it.hasNext(); ) {
+            QueryRow row = it.next();
+            assertEquals(2, row.getDocument().getProperties().get("version"));
+            Log.e(TAG, "row: " + row.getDocument().getProperties());
+            counter++;
+        }
+        assertEquals(1, counter);
+    }
 }
