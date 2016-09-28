@@ -3842,4 +3842,76 @@ public class ViewsTest extends LiteTestCaseWithDB {
             if (lvu != null) lvu.stop();
         }
     }
+
+    // https://github.com/couchbase/couchbase-lite-java-core/issues/1369
+    public void testEmitSameKeyAndValue() throws CouchbaseLiteException, InterruptedException {
+        LiveQuery query = null;
+        try {
+
+
+            com.couchbase.lite.View view = database.getView("tasks");
+            if (view.getMap() == null) {
+                Mapper map = new Mapper() {
+                    @Override
+                    public void map(Map<String, Object> document, Emitter emitter) {
+                        if ("task".equals(document.get("type"))) {
+                            List<Object> keys = new ArrayList<Object>();
+                            keys.add(document.get("list_id"));
+                            keys.add(document.get("created_at"));
+                            emitter.emit(keys, null);
+                            Log.e(TAG, "EMIT(%s, null) rev=%s", keys, document.get("_rev"));
+                        }
+                    }
+                };
+                view.setMap(map, "1.0");
+            }
+
+            final CountDownLatch changedLatch1 = new CountDownLatch(1);
+            final CountDownLatch changedLatch2 = new CountDownLatch(2);
+
+            query = view.createQuery().toLiveQuery();
+            query.addChangeListener(new LiveQuery.ChangeListener() {
+                @Override
+                public void changed(LiveQuery.ChangeEvent event) {
+                    Log.e(TAG, "changed() event.count = %d", event.getRows().getCount());
+                    if (event.getRows().getCount() > 0) {
+                        for (QueryRow row : event.getRows()) {
+                            Log.e(TAG, "\trow = [%s]", row);
+                        }
+                        changedLatch1.countDown();
+                        changedLatch2.countDown();
+                    }
+                }
+            });
+            query.start();
+
+            String currentTimeString = new Date().toString();
+            String listId = "List_1";
+
+            // create document
+            Map<String, Object> prop1 = new HashMap<String, Object>();
+            prop1.put("type", "task");
+            prop1.put("title", "TITLE");
+            prop1.put("checked", Boolean.FALSE);
+            prop1.put("created_at", currentTimeString);
+            prop1.put("list_id", listId);
+
+            Document doc = database.createDocument();
+            doc.putProperties(prop1);
+
+            assertTrue(changedLatch1.await(3, TimeUnit.SECONDS));
+
+            // update document
+            Map<String, Object> prop2 = new HashMap<String, Object>(doc.getProperties());
+            prop2.put("title", "title");
+            doc.putProperties(prop2);
+
+            assertTrue(changedLatch2.await(5, TimeUnit.SECONDS));
+            Log.e(TAG, "changedLatch2=%d", changedLatch2.getCount());
+        } finally {
+            if (query != null)
+                query.stop();
+            query = null;
+        }
+    }
 }
