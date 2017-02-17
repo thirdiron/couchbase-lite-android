@@ -766,4 +766,106 @@ public class DocumentTest extends LiteTestCaseWithDB {
         // Without fix, ChangeListener.changed() method called more than twice.
         assertEquals(0, counter.getCount());
     }
+    
+    // https://github.com/couchbase/couchbase-lite-android/issues/1069
+    public void testResolveConflictInChangeListener2() throws Exception {
+        // Database.ChangeListener
+        final CountDown counter = new CountDown(3);
+        // 1. initial doc
+        // 2. simulate pull replication 1 doc with higher revision number is inserted => conflict
+        // 3. After resolved conflict
+        database.addChangeListener(new Database.ChangeListener() {
+            @Override
+            public void changed(Database.ChangeEvent event) {
+                counter.countDown();
+
+                // DEBUGGING
+                Log.e(TAG, "changed() event=%s", event);
+                for (DocumentChange change : event.getChanges())
+                    Log.e(TAG, "\t\tchange=%s", change);
+
+                for (DocumentChange change : event.getChanges()) {
+                    if (!change.isCurrentRevision())
+                        continue;
+                    String docID = change.getDocumentId();
+                    Document doc = database.getDocument(docID);
+                    try {
+                        resolveConflict(doc);
+                    } catch (CouchbaseLiteException e) {
+                        Log.e(TAG, "Error in resolveConflict(Document)", e);
+                    }
+                }
+            }
+        });
+
+        // 1. Insert initial document with revision 1
+        RevisionInternal rev_0001 = new RevisionInternal("-HashTag_03665030-7c8f-4df8-8d29-a42f00d5d38b",
+                "1-013c38222436e5d474c067910ece1f1f", false);
+        Map<String, Object> props_0001 = new HashMap<String, Object>();
+        props_0001.put("_id", rev_0001.getDocID());
+        props_0001.put("_rev", rev_0001.getRevID());
+        props_0001.put("key", 1);
+        rev_0001.setProperties(props_0001);
+        List<String> history_0001 = Arrays.asList();
+        database.forceInsert(rev_0001, history_0001, null);
+
+        // 2. Insert updated document with revision 7379, simulate pull replicaton
+        database.runInTransaction(new TransactionalTask() {
+            @Override
+            public boolean run() {
+                RevisionInternal rev_7379 = new RevisionInternal("-HashTag_03665030-7c8f-4df8-8d29-a42f00d5d38b",
+                        "7379-fde7f017b93ffd20a56fb4df993e5cd9", false);
+                Map<String, Object> props_7379 = new HashMap<String, Object>();
+                props_7379.put("_id", rev_7379.getDocID());
+                props_7379.put("_rev", rev_7379.getRevID());
+                props_7379.put("key", 7379);
+                rev_7379.setProperties(props_7379);
+                List<String> history_7379 = Arrays.asList("7378-d5a97030f323d5b4094286c1fdf7574f");
+                try {
+                    database.forceInsert(rev_7379, history_7379, null);
+                } catch (CouchbaseLiteException e) {
+                    Log.e(TAG, "Error in forceInsert()", e);
+                }
+                return true;
+            }
+        });
+
+        assertEquals(0, counter.getCount());
+        Document doc = database.getDocument("-HashTag_03665030-7c8f-4df8-8d29-a42f00d5d38b");
+        List<SavedRevision> conflicts = doc.getConflictingRevisions();
+        assertEquals(1, conflicts.size());
+        assertTrue(conflicts.get(0).getId().startsWith("7380-"));
+        SavedRevision current = doc.getCurrentRevision();
+        assertTrue(current.getId().startsWith("7380-"));
+    }
+
+    private void resolveConflict(final Document doc) throws CouchbaseLiteException {
+        final List<SavedRevision> conflicts = doc.getConflictingRevisions();
+        if (conflicts.size() > 1) {
+            // There is more than one current revision, thus a conflict!
+            database.runInTransaction(new TransactionalTask() {
+                @Override
+                public boolean run() {
+                    try {
+                        // Delete the conflicting revisions to get rid of the conflict:
+                        SavedRevision current = doc.getCurrentRevision();
+                        for (SavedRevision rev : conflicts) {
+                            Log.e(TAG, "Resolving conflict: " + rev);
+                            UnsavedRevision newRev = rev.createRevision();
+                            if (!rev.getId().equals(current.getId())) {
+                                newRev.setIsDeletion(true);
+                            }
+                            // saveAllowingConflict allows 'rev' to be updated even if it
+                            // is not the document's current revision.
+                            SavedRevision savedRevision = newRev.save(false); // tested with true too
+                            Log.e(TAG, "SavedRevision" + savedRevision);
+                        }
+                    } catch (CouchbaseLiteException e) {
+                        return false;
+                    }
+                    return true;
+                }
+            });
+        }
+    }
 }
